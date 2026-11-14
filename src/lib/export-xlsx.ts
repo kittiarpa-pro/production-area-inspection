@@ -47,6 +47,7 @@ export function exportInspectionXlsx(form: InspectionForm) {
       "Max",
       "Result (0–10)",
       "N/A",
+      "Picture",
       "Comment",
     ],
   ];
@@ -59,6 +60,7 @@ export function exportInspectionXlsx(form: InspectionForm) {
       "",
       stats.maxSum,
       stats.resultSum,
+      "",
       "",
       `Grade ${fmtGrade(stats.grade)}${
         stats.label ? ` — ${stats.label.levelTh} / ${stats.label.levelEn}` : ""
@@ -73,6 +75,7 @@ export function exportInspectionXlsx(form: InspectionForm) {
         10,
         ans?.na ? "" : (ans?.score ?? ""),
         ans?.na ? "N/A" : "",
+        ans?.photo ? `มีรูป: ${ans.photo.name}` : "",
         ans?.comment ?? "",
       ]);
     }

@@ -12,11 +12,18 @@ export type CategoryDef = {
   items: ChecklistItemDef[];
 };
 
+export type ItemPhoto = {
+  dataUrl: string;
+  name: string;
+};
+
 /** Score 0–10, or null when marked N/A */
 export type ItemAnswer = {
   score: number | null;
   na: boolean;
   comment: string;
+  /** Optional evidence photo (not required) */
+  photo: ItemPhoto | null;
 };
 
 export type InspectionForm = {
@@ -744,7 +751,7 @@ export const CATEGORIES: CategoryDef[] = [
 export const ALL_ITEMS = CATEGORIES.flatMap((c) => c.items);
 
 export function emptyAnswer(): ItemAnswer {
-  return { score: null, na: false, comment: "" };
+  return { score: null, na: false, comment: "", photo: null };
 }
 
 export function todayISODate() {
@@ -853,4 +860,4 @@ export function overallStats(answers: Record<string, ItemAnswer>) {
   };
 }
 
-export const STORAGE_KEY = "production-area-inspection-draft-v2-score";
+export const STORAGE_KEY = "production-area-inspection-draft-v3-photo";

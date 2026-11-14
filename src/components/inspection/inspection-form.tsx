@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ALL_ITEMS,
   CATEGORIES,
   MAX_ITEM_SCORE,
   SCORE_CRITERIA,
@@ -28,6 +29,7 @@ import {
   SUMMARY_GRADES,
   categoryStats,
   createEmptyForm,
+  emptyAnswer,
   overallStats,
   scoreLevel,
   todayISODate,
@@ -36,6 +38,7 @@ import {
 } from "@/lib/checklist-data";
 import { exportInspectionXlsx } from "@/lib/export-xlsx";
 import { cn } from "@/lib/utils";
+import { ItemPhotoField } from "@/components/inspection/item-photo-field";
 
 const SCORE_OPTIONS = Array.from({ length: MAX_ITEM_SCORE + 1 }, (_, i) => i);
 
@@ -54,12 +57,18 @@ export function InspectionFormApp() {
         const parsed = JSON.parse(raw) as InspectionForm;
         if (parsed?.items) {
           const blank = createEmptyForm(todayISODate());
+          const items = Object.fromEntries(
+            ALL_ITEMS.map((item) => [
+              item.id,
+              { ...emptyAnswer(), ...parsed.items?.[item.id] },
+            ]),
+          );
           startTransition(() => {
             setForm({
               ...blank,
               ...parsed,
               date: parsed.date || blank.date,
-              items: { ...blank.items, ...parsed.items },
+              items,
             });
           });
           setHydrated(true);
@@ -76,7 +85,13 @@ export function InspectionFormApp() {
   useEffect(() => {
     if (!hydrated) return;
     const t = window.setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+      } catch {
+        setError(
+          "พื้นที่จัดเก็บฉบับร่างเต็ม (มักเกิดจากรูปจำนวนมาก) — ลบรูปบางรายการหรือส่งออก Excel ก่อน",
+        );
+      }
     }, 400);
     return () => window.clearTimeout(t);
   }, [form, hydrated]);
@@ -467,6 +482,10 @@ export function InspectionFormApp() {
                             {level.criteriaTh}
                           </p>
                         ) : null}
+                        <ItemPhotoField
+                          photo={ans.photo ?? null}
+                          onChange={(photo) => updateItem(item.id, { photo })}
+                        />
                         <Textarea
                           value={ans.comment}
                           onChange={(e) =>
