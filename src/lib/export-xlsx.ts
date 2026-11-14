@@ -1,109 +1,162 @@
 import * as XLSX from "xlsx";
 import {
-  CHECKLIST_ITEMS,
+  ALL_ITEMS,
+  CATEGORIES,
+  SCORE_CRITERIA,
+  SUMMARY_GRADES,
+  categoryStats,
+  overallStats,
   type InspectionForm,
-  countProgress,
 } from "./checklist-data";
 
-const RESULT_LABEL: Record<string, string> = {
-  pass: "ผ่าน / Pass",
-  fail: "ไม่ผ่าน / Fail",
-  na: "N/A",
-  "": "",
-};
-
-const RISK_LABEL: Record<string, string> = {
-  high: "สูง / High",
-  medium: "กลาง / Medium",
-  low: "ต่ำ / Low",
-  "": "",
-};
+function fmtGrade(n: number | null) {
+  if (n === null) return "";
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
 
 export function exportInspectionXlsx(form: InspectionForm) {
-  const progress = countProgress(form);
+  const overall = overallStats(form.items);
 
-  const headerRows: (string | number)[][] = [
-    ["Production Area Inspection Checklist"],
-    ["แบบตรวจพื้นที่ผลิต"],
+  const rows: (string | number)[][] = [
+    ["ใบรายงานการตรวจสอบพื้นที่ (Area Inspection Report)"],
+    ["Production Area Inspection Checklist — Injection Production"],
     [],
-    ["สถานที่ / Site", form.site, "อาคาร / Building", form.building],
+    ["Doc. No.", form.docNo, "Date", form.date, "Rev.", form.rev],
+    ["พื้นที่สำรวจ (Area Inspected)", form.areaInspected],
     [
-      "สายการผลิต / Line",
-      form.productionLine,
-      "กะ / Shift",
-      form.shift,
+      "ผู้สำรวจ (Inspected By)",
+      form.inspectedBy,
+      "ผู้รับผิดชอบพื้นที่ (Person in charge)",
+      form.personInCharge,
     ],
-    ["แผนก / Department", form.department, "วันที่ / Date", form.date],
-    ["ผู้ตรวจ / Inspected by", form.inspectedBy],
     [],
     [
-      "สรุป / Summary",
-      `ตรวจแล้ว ${progress.answered}/${progress.total}`,
-      `ผ่าน ${progress.pass}`,
-      `ไม่ผ่าน ${progress.fail}`,
-      `N/A ${progress.na}`,
+      "สรุปภาพรวม",
+      `ตรวจแล้ว ${overall.answered}/${overall.total}`,
+      `คะแนนรวม ${overall.resultSum}/${overall.maxSum}`,
+      `Grade ${fmtGrade(overall.grade)}`,
+      overall.label
+        ? `${overall.label.levelTh} / ${overall.label.levelEn}`
+        : "",
     ],
     [],
     [
       "No.",
-      "พื้นที่ / Area",
-      "รายการตรวจ / Inspection item",
-      "ผล / Result",
-      "ความเสี่ยง / Risk",
-      "ปัญหา / การแก้ไข / Problem & corrective action",
+      "หมวด / Category",
+      "รายการตรวจ / Requirement",
+      "Max",
+      "Result (0–10)",
+      "N/A",
+      "Comment",
     ],
   ];
 
-  const itemRows = CHECKLIST_ITEMS.map((item) => {
-    const ans = form.items[item.id];
-    return [
-      item.no,
-      `${item.areaTh} / ${item.areaEn}`,
-      `${item.itemTh} / ${item.itemEn}`,
-      RESULT_LABEL[ans?.result ?? ""] ?? "",
-      RISK_LABEL[ans?.risk ?? ""] ?? "",
-      ans?.action ?? "",
-    ];
+  for (const cat of CATEGORIES) {
+    const stats = categoryStats(cat, form.items);
+    rows.push([
+      "",
+      `${cat.titleTh} / ${cat.titleEn}`,
+      "",
+      stats.maxSum,
+      stats.resultSum,
+      "",
+      `Grade ${fmtGrade(stats.grade)}${
+        stats.label ? ` — ${stats.label.levelTh} / ${stats.label.levelEn}` : ""
+      }`,
+    ]);
+    for (const item of cat.items) {
+      const ans = form.items[item.id];
+      rows.push([
+        item.no,
+        `${cat.titleTh} / ${cat.titleEn}`,
+        `${item.itemTh} / ${item.itemEn}`,
+        10,
+        ans?.na ? "" : (ans?.score ?? ""),
+        ans?.na ? "N/A" : "",
+        ans?.comment ?? "",
+      ]);
+    }
+  }
+
+  rows.push([]);
+  rows.push(["Inspection Category Grade Summary"]);
+  rows.push(["No.", "Inspection Item", "Maximum Score", "Result Score", "Grade", "Level"]);
+  CATEGORIES.forEach((cat, i) => {
+    const stats = categoryStats(cat, form.items);
+    rows.push([
+      i + 1,
+      `${cat.titleTh} / ${cat.titleEn}`,
+      stats.maxSum,
+      stats.resultSum,
+      fmtGrade(stats.grade),
+      stats.label ? `${stats.label.levelTh} / ${stats.label.levelEn}` : "",
+    ]);
   });
 
-  const followRows: (string | number)[][] = [
-    [],
-    ["งานค้างก่อนการตรวจครั้งถัดไป / Follow-up before next inspection"],
-    ["รายการ / Task", "ผู้รับผิดชอบ / Owner", "กำหนดเสร็จ / Due date"],
-    ...form.followUps
-      .filter((f) => f.task.trim() || f.owner.trim() || f.dueDate)
-      .map((f) => [f.task, f.owner, f.dueDate]),
-    [],
-    ["บันทึกเพิ่มเติม / Overall notes", form.overallNotes],
-    [],
-    [
-      "ผู้ตรวจ / Inspected by",
-      form.inspectedBySign || form.inspectedBy,
-      "ผู้ทบทวน / Reviewed by",
-      form.reviewedBy,
-      "ผู้อนุมัติ / Approved by",
-      form.approvedBy,
-    ],
-  ];
+  rows.push([]);
+  rows.push(["Remark", form.remark]);
+  rows.push([]);
+  rows.push(["เกณฑ์การให้คะแนน 0–10 (Area Inspection Scoring Criteria)"]);
+  rows.push(["คะแนน", "ระดับ", "เกณฑ์การพิจารณา"]);
+  for (const c of SCORE_CRITERIA) {
+    rows.push([
+      c.score,
+      `${c.levelTh} / ${c.levelEn}`,
+      `${c.criteriaTh} / ${c.criteriaEn}`,
+    ]);
+  }
+  rows.push([]);
+  rows.push(["เกณฑ์สรุปผลคะแนน"]);
+  rows.push(["คะแนน", "ระดับ", "กิจกรรม"]);
+  for (const g of SUMMARY_GRADES) {
+    rows.push([
+      `${g.min}–${Math.floor(g.max)}`,
+      `${g.levelTh} / ${g.levelEn}`,
+      `${g.actionTh} / ${g.actionEn}`,
+    ]);
+  }
 
-  const sheet = XLSX.utils.aoa_to_sheet([
-    ...headerRows,
-    ...itemRows,
-    ...followRows,
-  ]);
-
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
   sheet["!cols"] = [
     { wch: 6 },
-    { wch: 28 },
-    { wch: 55 },
-    { wch: 16 },
-    { wch: 16 },
+    { wch: 36 },
+    { wch: 70 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 6 },
     { wch: 40 },
   ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, sheet, "Inspection");
+  XLSX.utils.book_append_sheet(wb, sheet, "INJECTION PRODUCTION");
+
+  const criteriaRows: (string | number)[][] = [
+    ["เกณฑ์การให้คะแนน [Area Inspection Scoring Criteria]"],
+    [],
+    ["1. เกณฑ์การให้คะแนน 0–10 คะแนน"],
+    ["คะแนน", "ระดับการประเมิน", "เกณฑ์การพิจารณา (Evaluation Criteria)"],
+    ...SCORE_CRITERIA.map((c) => [
+      c.score,
+      `${c.levelTh} (${c.levelEn})`,
+      `${c.criteriaTh} / ${c.criteriaEn}`,
+    ]),
+    [],
+    ["2. เกณฑ์การสรุปผลคะแนนการตรวจพื้นที่"],
+    ["คะแนน", "ระดับการประเมิน", "กิจกรรม"],
+    ...SUMMARY_GRADES.map((g) => [
+      `${g.min}–${Math.floor(g.max)}`,
+      `${g.levelTh} (${g.levelEn})`,
+      `${g.actionTh} / ${g.actionEn}`,
+    ]),
+  ];
+  const criteriaSheet = XLSX.utils.aoa_to_sheet(criteriaRows);
+  criteriaSheet["!cols"] = [{ wch: 10 }, { wch: 28 }, { wch: 80 }];
+  XLSX.utils.book_append_sheet(wb, criteriaSheet, "เกณฑ์คะแนน");
+
   const stamp = form.date || "draft";
-  const safeSite = (form.site || "site").replace(/[^\w\u0E00-\u0E7F-]+/g, "_");
-  XLSX.writeFile(wb, `Production_Area_Inspection_${safeSite}_${stamp}.xlsx`);
+  XLSX.writeFile(
+    wb,
+    `Production_Area_Inspection_Injection_${stamp}.xlsx`,
+  );
+  return ALL_ITEMS.length;
 }

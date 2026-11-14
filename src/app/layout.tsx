@@ -15,9 +15,9 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "Production Area Inspection Checklist",
+  title: "Area Inspection Report — Injection Production",
   description:
-    "แบบฟอร์มกรอกข้อมูลตรวจพื้นที่ผลิต — Pass / Fail / N/A พร้อมส่งออก Excel",
+    "ใบรายงานการตรวจสอบพื้นที่ผลิต-ฉีด ให้คะแนน 0–10 ตามเกณฑ์ BRCGS พร้อมส่งออก Excel",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
