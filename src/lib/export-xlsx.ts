@@ -26,7 +26,7 @@ export function exportInspectionXlsx(form: InspectionForm) {
     row(["ใบรายงานการตรวจสอบพื้นที่ (Area Inspection Report)"]),
     row(["Production Area Inspection Checklist — Injection Production"]),
     [],
-    row(["Doc. No.", form.docNo, "Date", form.date, "Rev.", form.rev]),
+    row(["Date", form.date]),
     row(["พื้นที่สำรวจ (Area Inspected)", form.areaInspected]),
     row([
       "ผู้สำรวจ (Inspected By)",

@@ -334,26 +334,12 @@ export function InspectionFormApp() {
             <p>Area Inspection Report — ฝ่ายผลิต-ฉีด</p>
           </div>
           <div className="meta-grid">
-            <Field label="Doc. No." htmlFor="docNo">
-              <Input
-                id="docNo"
-                value={form.docNo}
-                onChange={(e) => updateMeta("docNo", e.target.value)}
-              />
-            </Field>
             <Field label="วันที่ / Date *" htmlFor="date">
               <Input
                 id="date"
                 type="date"
                 value={form.date}
                 onChange={(e) => updateMeta("date", e.target.value)}
-              />
-            </Field>
-            <Field label="Rev." htmlFor="rev">
-              <Input
-                id="rev"
-                value={form.rev}
-                onChange={(e) => updateMeta("rev", e.target.value)}
               />
             </Field>
             <Field label="พื้นที่สำรวจ / Area Inspected" htmlFor="area">
