@@ -188,15 +188,6 @@ export function InspectionFormApp() {
               เกณฑ์คะแนน
             </Button>
           </div>
-          <p className="sheets-status">
-            <a
-              className="source-zip-link"
-              href="/api/source-zip"
-              download="production-area-inspection-github.zip"
-            >
-              ดาวน์โหลดโค้ด (ZIP) สำหรับอัปโหลดขึ้น GitHub
-            </a>
-          </p>
         </div>
       </header>
 
