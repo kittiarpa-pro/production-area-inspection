@@ -10,6 +10,7 @@ import {
 import {
   CheckCircle2,
   CircleAlert,
+  CloudUpload,
   Download,
   Eraser,
   Info,
@@ -48,6 +49,10 @@ export function InspectionFormApp() {
   const [showCriteria, setShowCriteria] = useState(false);
   const [saveFlash, setSaveFlash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sheetsConfigured, setSheetsConfigured] = useState<boolean | null>(
+    null,
+  );
+  const [submitting, setSubmitting] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -95,6 +100,21 @@ export function InspectionFormApp() {
     }, 400);
     return () => window.clearTimeout(t);
   }, [form, hydrated]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/submissions")
+      .then((res) => res.json())
+      .then((data: { configured?: boolean }) => {
+        if (!cancelled) setSheetsConfigured(Boolean(data.configured));
+      })
+      .catch(() => {
+        if (!cancelled) setSheetsConfigured(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const overall = useMemo(() => overallStats(form.items), [form.items]);
 
@@ -158,6 +178,53 @@ export function InspectionFormApp() {
     }
   }
 
+  async function handleSubmitToSheets() {
+    if (!validateForExport()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ form }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        mode?: string;
+        message?: string;
+        spreadsheetUrl?: string;
+        error?: string;
+        detail?: string;
+        answered?: number;
+        total?: number;
+      };
+      if (!res.ok) {
+        if (data.error === "incomplete") {
+          setError(`ยังให้คะแนนไม่ครบ: ${data.answered}/${data.total}`);
+        } else {
+          setError(
+            data.detail ||
+              data.message ||
+              "ส่งข้อมูลไป Google Sheet ไม่สำเร็จ",
+          );
+        }
+        return;
+      }
+      if (data.mode === "sample") {
+        flash(data.message || "บันทึกแบบตัวอย่างแล้ว (ยังไม่เชื่อมชีต)");
+      } else {
+        flash(data.message || "บันทึกลง Google Sheet แล้ว");
+      }
+      if (data.spreadsheetUrl) {
+        window.open(data.spreadsheetUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      setError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="inspection-shell">
       <header className="hero print:hidden">
@@ -170,7 +237,15 @@ export function InspectionFormApp() {
             BRCGS Packaging Materials
           </p>
           <div className="hero-cta">
-            <Button type="button" onClick={handleExport}>
+            <Button
+              type="button"
+              onClick={() => void handleSubmitToSheets()}
+              disabled={submitting}
+            >
+              <CloudUpload className="size-4" />
+              {submitting ? "กำลังบันทึก…" : "บันทึกลง Google Sheet"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleExport}>
               <Download className="size-4" />
               ส่งออก Excel
             </Button>
@@ -188,6 +263,13 @@ export function InspectionFormApp() {
               เกณฑ์คะแนน
             </Button>
           </div>
+          <p className="sheets-status">
+            {sheetsConfigured === null
+              ? "กำลังตรวจสถานะ Google Sheet…"
+              : sheetsConfigured
+                ? "เชื่อม Google Spreadsheet แล้ว — กดบันทึกเพื่อเก็บ raw data"
+                : "ยังไม่เชื่อมชีต (โหมดตัวอย่าง) — ตั้งค่า Secrets ตาม README แล้ว republish"}
+          </p>
         </div>
       </header>
 
@@ -583,7 +665,16 @@ export function InspectionFormApp() {
         </section>
 
         <div className="footer-actions print:hidden">
-          <Button type="button" size="lg" onClick={handleExport}>
+          <Button
+            type="button"
+            size="lg"
+            onClick={() => void handleSubmitToSheets()}
+            disabled={submitting}
+          >
+            <CloudUpload className="size-4" />
+            {submitting ? "กำลังบันทึก…" : "บันทึกลง Google Sheet"}
+          </Button>
+          <Button type="button" size="lg" variant="secondary" onClick={handleExport}>
             <Download className="size-4" />
             ส่งออกเป็น Excel
           </Button>

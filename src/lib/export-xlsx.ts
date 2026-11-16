@@ -8,29 +8,34 @@ import {
   overallStats,
   type InspectionForm,
 } from "./checklist-data";
+import { sanitizeRow } from "./sanitize-cell";
 
 function fmtGrade(n: number | null) {
   if (n === null) return "";
   return (Math.round(n * 100) / 100).toFixed(2);
 }
 
+function row(values: unknown[]) {
+  return sanitizeRow(values);
+}
+
 export function exportInspectionXlsx(form: InspectionForm) {
   const overall = overallStats(form.items);
 
   const rows: (string | number)[][] = [
-    ["ใบรายงานการตรวจสอบพื้นที่ (Area Inspection Report)"],
-    ["Production Area Inspection Checklist — Injection Production"],
+    row(["ใบรายงานการตรวจสอบพื้นที่ (Area Inspection Report)"]),
+    row(["Production Area Inspection Checklist — Injection Production"]),
     [],
-    ["Doc. No.", form.docNo, "Date", form.date, "Rev.", form.rev],
-    ["พื้นที่สำรวจ (Area Inspected)", form.areaInspected],
-    [
+    row(["Doc. No.", form.docNo, "Date", form.date, "Rev.", form.rev]),
+    row(["พื้นที่สำรวจ (Area Inspected)", form.areaInspected]),
+    row([
       "ผู้สำรวจ (Inspected By)",
       form.inspectedBy,
       "ผู้รับผิดชอบพื้นที่ (Person in charge)",
       form.personInCharge,
-    ],
+    ]),
     [],
-    [
+    row([
       "สรุปภาพรวม",
       `ตรวจแล้ว ${overall.answered}/${overall.total}`,
       `คะแนนรวม ${overall.resultSum}/${overall.maxSum}`,
@@ -38,7 +43,7 @@ export function exportInspectionXlsx(form: InspectionForm) {
       overall.label
         ? `${overall.label.levelTh} / ${overall.label.levelEn}`
         : "",
-    ],
+    ]),
     [],
     [
       "No.",
@@ -54,30 +59,34 @@ export function exportInspectionXlsx(form: InspectionForm) {
 
   for (const cat of CATEGORIES) {
     const stats = categoryStats(cat, form.items);
-    rows.push([
-      "",
-      `${cat.titleTh} / ${cat.titleEn}`,
-      "",
-      stats.maxSum,
-      stats.resultSum,
-      "",
-      "",
-      `Grade ${fmtGrade(stats.grade)}${
-        stats.label ? ` — ${stats.label.levelTh} / ${stats.label.levelEn}` : ""
-      }`,
-    ]);
+    rows.push(
+      row([
+        "",
+        `${cat.titleTh} / ${cat.titleEn}`,
+        "",
+        stats.maxSum,
+        stats.resultSum,
+        "",
+        "",
+        `Grade ${fmtGrade(stats.grade)}${
+          stats.label ? ` — ${stats.label.levelTh} / ${stats.label.levelEn}` : ""
+        }`,
+      ]),
+    );
     for (const item of cat.items) {
       const ans = form.items[item.id];
-      rows.push([
-        item.no,
-        `${cat.titleTh} / ${cat.titleEn}`,
-        `${item.itemTh} / ${item.itemEn}`,
-        10,
-        ans?.na ? "" : (ans?.score ?? ""),
-        ans?.na ? "N/A" : "",
-        ans?.photo ? `มีรูป: ${ans.photo.name}` : "",
-        ans?.comment ?? "",
-      ]);
+      rows.push(
+        row([
+          item.no,
+          `${cat.titleTh} / ${cat.titleEn}`,
+          `${item.itemTh} / ${item.itemEn}`,
+          10,
+          ans?.na ? "" : (ans?.score ?? ""),
+          ans?.na ? "N/A" : "",
+          ans?.photo ? `มีรูป: ${ans.photo.name}` : "",
+          ans?.comment ?? "",
+        ]),
+      );
     }
   }
 
@@ -86,18 +95,20 @@ export function exportInspectionXlsx(form: InspectionForm) {
   rows.push(["No.", "Inspection Item", "Maximum Score", "Result Score", "Grade", "Level"]);
   CATEGORIES.forEach((cat, i) => {
     const stats = categoryStats(cat, form.items);
-    rows.push([
-      i + 1,
-      `${cat.titleTh} / ${cat.titleEn}`,
-      stats.maxSum,
-      stats.resultSum,
-      fmtGrade(stats.grade),
-      stats.label ? `${stats.label.levelTh} / ${stats.label.levelEn}` : "",
-    ]);
+    rows.push(
+      row([
+        i + 1,
+        `${cat.titleTh} / ${cat.titleEn}`,
+        stats.maxSum,
+        stats.resultSum,
+        fmtGrade(stats.grade),
+        stats.label ? `${stats.label.levelTh} / ${stats.label.levelEn}` : "",
+      ]),
+    );
   });
 
   rows.push([]);
-  rows.push(["Remark", form.remark]);
+  rows.push(row(["Remark", form.remark]));
   rows.push([]);
   rows.push(["เกณฑ์การให้คะแนน 0–10 (Area Inspection Scoring Criteria)"]);
   rows.push(["คะแนน", "ระดับ", "เกณฑ์การพิจารณา"]);

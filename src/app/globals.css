@@ -111,6 +111,14 @@ body {
   line-height: 1.55;
 }
 
+.sheets-status {
+  margin: 0.85rem 0 0;
+  max-width: 52ch;
+  color: rgba(244, 250, 247, 0.78);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .hero-cta {
   display: flex;
   flex-wrap: wrap;

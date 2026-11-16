@@ -40,7 +40,20 @@
 2. ให้คะแนนแต่ละรายการ 0–10 หรือเลือก N/A  
 3. แนบรูปภาพได้รายการละรูป (ไม่บังคับ)  
 4. ใส่ Comment เมื่อจำเป็น  
-5. กด **ส่งออก Excel** (ได้ทั้งชีตตรวจและชีตเกณฑ์คะแนน)
+5. กด **บันทึกลง Google Sheet** เพื่อเก็บ raw data  
+6. หรือกด **ส่งออก Excel** (ได้ทั้งชีตตรวจและชีตเกณฑ์คะแนน)
+
+## Google Spreadsheet (raw data)
+
+ดูขั้นตอนเต็มใน [`docs/google-sheets-setup.md`](docs/google-sheets-setup.md)
+
+Secrets ที่ต้องตั้งค่า:
+
+- `GOOGLE_CLIENT_EMAIL`
+- `GOOGLE_PRIVATE_KEY`
+- `GOOGLE_SHEETS_ID`
+
+เมื่อเชื่อมแล้ว ระบบเขียน 2 แท็บ: `Submissions` (สรุปรายครั้ง) และ `RawScores` (คะแนนดิบทุกรายการ)
 
 ## รันท้องถิ่น
 
