@@ -119,6 +119,16 @@ body {
   line-height: 1.45;
 }
 
+.source-zip-link {
+  color: #dff7ea;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.source-zip-link:hover {
+  color: #fff;
+}
+
 .hero-cta {
   display: flex;
   flex-wrap: wrap;
