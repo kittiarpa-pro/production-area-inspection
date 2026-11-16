@@ -2,10 +2,19 @@ import { NextResponse } from "next/server";
 import type { InspectionForm } from "@/lib/checklist-data";
 import { ALL_ITEMS, overallStats } from "@/lib/checklist-data";
 import { appendInspectionToSheet, readSheetsConfig } from "@/lib/google-sheets";
+import {
+  accessCodeMatches,
+  assertBodySize,
+  checkRateLimit,
+  clientIp,
+  readSubmitAccessCode,
+} from "@/lib/submit-auth";
+import { formWithoutPhotoBytes } from "@/lib/strip-photos";
 import { buildSubmissionPayload } from "@/lib/submission-rows";
 
 type Body = {
   form?: InspectionForm;
+  accessCode?: string;
 };
 
 function isForm(value: unknown): value is InspectionForm {
@@ -20,6 +29,24 @@ function isForm(value: unknown): value is InspectionForm {
 }
 
 export async function POST(request: Request) {
+  if (!assertBodySize(request)) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
+
+  const ip = clientIp(request);
+  const rate = checkRateLimit(`submit:${ip}`);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      {
+        status: 429,
+        headers: rate.retryAfterSec
+          ? { "Retry-After": String(rate.retryAfterSec) }
+          : undefined,
+      },
+    );
+  }
+
   let body: Body;
   try {
     body = (await request.json()) as Body;
@@ -31,7 +58,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_form" }, { status: 400 });
   }
 
-  const form = body.form;
+  const expectedCode = readSubmitAccessCode();
+  const sheetsConfig = readSheetsConfig();
+
+  // Writing to Google Sheets always requires a shared access code (free gate).
+  if (sheetsConfig && !expectedCode) {
+    return NextResponse.json(
+      { error: "auth_not_configured" },
+      { status: 503 },
+    );
+  }
+
+  if (expectedCode && !accessCodeMatches(body.accessCode, expectedCode)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const form = formWithoutPhotoBytes(body.form);
   if (!form.inspectedBy.trim() || !form.date) {
     return NextResponse.json(
       { error: "missing_required_fields" },
@@ -52,9 +94,8 @@ export async function POST(request: Request) {
   }
 
   const payload = buildSubmissionPayload(form);
-  const config = readSheetsConfig();
 
-  if (!config) {
+  if (!sheetsConfig) {
     return NextResponse.json({
       ok: true,
       mode: "sample",
@@ -65,8 +106,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await appendInspectionToSheet({
-      config,
+    await appendInspectionToSheet({
+      config: sheetsConfig,
       submissionRow: payload.submissionRow,
       rawRows: payload.rawRows,
     });
@@ -74,23 +115,19 @@ export async function POST(request: Request) {
       ok: true,
       mode: "google_sheets",
       submissionId: payload.submissionId,
-      spreadsheetUrl: result.spreadsheetUrl,
       message: "บันทึกลง Google Spreadsheet แล้ว",
     });
-  } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : "sheets_append_failed";
-    return NextResponse.json(
-      { error: "sheets_failed", detail },
-      { status: 502 },
-    );
+  } catch {
+    return NextResponse.json({ error: "sheets_failed" }, { status: 502 });
   }
 }
 
 export async function GET() {
   const config = readSheetsConfig();
+  const authConfigured = Boolean(readSubmitAccessCode());
   return NextResponse.json({
     configured: Boolean(config),
+    authRequired: Boolean(config) || authConfigured,
     mode: config ? "google_sheets" : "sample",
   });
 }

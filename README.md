@@ -40,11 +40,12 @@
 2. ให้คะแนนแต่ละรายการ 0–10 หรือเลือก N/A  
 3. แนบรูปภาพได้รายการละรูป (ไม่บังคับ)  
 4. ใส่ Comment เมื่อจำเป็น  
-5. กด **บันทึกลง Google Sheet** เพื่อเก็บ raw data  
+5. กรอกรหัสเข้าถึงของทีม แล้วกด **บันทึกลง Google Sheet** เพื่อเก็บ raw data (ฟรี ไม่หมดอายุ)  
 6. หรือกด **ส่งออก Excel** (ได้ทั้งชีตตรวจและชีตเกณฑ์คะแนน)
 
 ## Google Spreadsheet (raw data)
 
+ใช้ Google Spreadsheet ฟรี — ข้อมูลอยู่ในชีตของคุณเองและเก็บได้ตลอดไป  
 ดูขั้นตอนเต็มใน [`docs/google-sheets-setup.md`](docs/google-sheets-setup.md)
 
 Secrets ที่ต้องตั้งค่า:
@@ -52,6 +53,7 @@ Secrets ที่ต้องตั้งค่า:
 - `GOOGLE_CLIENT_EMAIL`
 - `GOOGLE_PRIVATE_KEY`
 - `GOOGLE_SHEETS_ID`
+- `SUBMIT_ACCESS_CODE` — รหัสที่ทีมกรอกตอนบันทึก (กันคนนอกเขียนชีต)
 
 เมื่อเชื่อมแล้ว ระบบเขียน 2 แท็บ: `Submissions` (สรุปรายครั้ง) และ `RawScores` (คะแนนดิบทุกรายการ)
 

@@ -124,6 +124,17 @@ body {
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1.5rem;
+  align-items: center;
+}
+
+.access-code-field {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.access-code-field.footer-access {
+  justify-content: flex-end;
 }
 
 .sticky-bar {
